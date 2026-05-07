@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مدرسة أحمد وصافو</title>
+    <style>
+        :root { --primary: #ff4757; --secondary: #2ed573; --accent: #1e90ff; --quran: #8e44ad; --bg: #fffbe6; }
+        body { font-family: 'Arial', sans-serif; background: var(--bg); text-align: center; margin: 0; overflow-x: hidden; }
+        
+        /* شاشة الترحيب والأغنية */
+        #welcome-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .bounce-text { font-size: 30px; color: var(--primary); animation: bounce 1s infinite; margin-bottom: 20px; font-weight: bold; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        .start-play-btn { padding: 25px 60px; font-size: 35px; background: var(--secondary); color: white; border: none; border-radius: 60px; cursor: pointer; box-shadow: 0 8px 0 #1b9e53; }
+
+        /* الشاشات والقوائم */
+        .screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; flex-direction: column; align-items: center; padding: 15px; box-sizing: border-box; overflow-y: auto; }
+        #home-screen { display: flex; background: var(--bg); }
+        .menu-card { width: 85%; max-width: 350px; padding: 40px 20px; margin: 15px; border-radius: 30px; color: white; font-size: 28px; font-weight: bold; cursor: pointer; box-shadow: 0 10px 0 rgba(0,0,0,0.1); transition: 0.2s; }
+        .menu-card:active { transform: translateY(5px); box-shadow: 0 5px 0 rgba(0,0,0,0.1); }
+        .bg-letters { background: var(--accent); }
+        .bg-quran { background: var(--quran); }
+
+        /* الحروف */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 12px; width: 100%; max-width: 550px; padding: 10px; }
+        .letter-btn { background: white; border: 4px solid var(--accent); border-radius: 20px; padding: 20px 0; font-size: 32px; font-weight: bold; color: #333; cursor: pointer; }
+        
+        /* السبورة والقرآن */
+        canvas { background: #fdfdfd; border: 4px dashed var(--primary); border-radius: 20px; touch-action: none; }
+        .aya-display { font-size: 32px; color: #2d3436; margin: 30px 10px; line-height: 1.8; background: #e3f2fd; padding: 25px; border-radius: 20px; border-bottom: 6px solid var(--accent); }
+        .btn { padding: 15px 30px; border-radius: 50px; border: none; color: white; cursor: pointer; font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="welcome-overlay">
+        <div class="bounce-text">🌈 مدرسة أحمد وصافو 🌈</div>
+        <button class="start-play-btn" onclick="playIntro()">ابدأ الأغنية! 🎶</button>
+    </div>
+
+    <div id="home-screen" class="screen">
+        <h1 style="color: var(--primary); font-size: 35px;">مرحباً أحمد وصافو!</h1>
+        <div class="menu-card bg-letters" onclick="switchScreen('letters-screen')">🔠 تعلم الحروف</div>
+        <div class="menu-card bg-quran" onclick="switchScreen('quran-screen')">📖 بستان القرآن</div>
+    </div>
+
+    <div id="letters-screen" class="screen">
+        <button class="btn" style="background: #636e72;" onclick="switchScreen('home-screen')">🏠 الرئيسية</button>
+        <h2 style="color: var(--accent);">اختر حرفاً لنتعلمه</h2>
+        <div class="grid" id="lettersGrid"></div>
+    </div>
+
+    <div id="action-screen" class="screen">
+        <h2 id="current-l" style="font-size: 40px; color: var(--accent);"></h2>
+        <canvas id="writeCanvas"></canvas>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn" style="background: var(--primary);" onclick="clearCanvas()">مسح 🗑️</button>
+            <button class="btn" style="background: var(--secondary);" onclick="speak('أحسنت يا أحمد، أحسنتِ يا صافو، خطكما جميل جداً')">أحسنت ⭐</button>
+            <button class="btn" style="background: #636e72;" onclick="switchScreen('letters-screen')">عودة</button>
+        </div>
+    </div>
+
+    <div id="quran-screen" class="screen">
+        <button class="btn" style="background: #636e72;" onclick="switchScreen('home-screen')">🏠 الرئيسية</button>
+        <h2 style="color: var(--quran);">تحفيظ القرآن الكريم</h2>
+        <button class="menu-card bg-quran" style="font-size:22px; padding:20px;" onclick="startSurah('الفاتحة', ['الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ', 'الرَّحْمَنِ الرَّحِيمِ', 'مَالِكِ يَوْمِ الدِّينِ', 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ', 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ', 'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ', 'غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ'])">سورة الفاتحة 🕌</button>
+        <button class="menu-card bg-quran" style="font-size:22px; padding:20px;" onclick="startSurah('الإخلاص', ['قُلْ هُوَ اللَّهُ أَحَدٌ', 'اللَّهُ الصَّمَدُ', 'لَمْ يَلِدْ وَلَمْ يُولَدْ', 'وَمَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ'])">سورة الإخلاص ✨</button>
+    </div>
+
+    <div id="memorize-screen" class="screen">
+        <h2 id="surah-title" style="color: var(--quran);"></h2>
+        <div id="aya-display" class="aya-display"></div>
+        <button class="btn" style="background: var(--accent); padding: 25px 50px; font-size: 24px;" onclick="nextAya()">الآية التالية ➡️</button>
+        <br>
+        <button class="btn" style="background: #636e72; margin-top:20px;" onclick="switchScreen('quran-screen')">توقف</button>
+    </div>
+
+    <script>
+        const letters = "أبتثجحخدذرزسشصضطظعغفقكلمنهـوي".split("");
+        let ayaIdx = 0, currentAyat = [];
+
+        // أغنية البداية
+        function playIntro() {
+            document.getElementById('welcome-overlay').style.display = 'none';
+            switchScreen('home-screen');
+            
+            // "لحن" الأغنية الترحيبية
+            speak("أهلاً بيك يا أحمد، أهلاً بيكِ يا صافو.. في مدرسة الحروف والقرآن.. هيا نلعب.. هيا نتعلم!");
+        }
+
+        function switchScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById(id).style.display = 'flex';
+            if(id === 'action-screen') initCanvas();
+            window.speechSynthesis.cancel();
+        }
+
+        // بناء الحروف
+        const grid = document.getElementById('lettersGrid');
+        letters.forEach(l => {
+            const b = document.createElement('div');
+            b.className = 'letter-btn';
+            b.innerText = l;
+            b.onclick = () => {
+                document.getElementById('current-l').innerText = "اكتب حرف " + l;
+                switchScreen('action-screen');
+                speak("اكتب حرف " + l);
+            };
+            grid.appendChild(b);
+        });
+
+        // تحفيظ القرآن
+        function startSurah(name, ayat) {
+            currentAyat = ayat; ayaIdx = 0;
+            document.getElementById('surah-title').innerText = "سورة " + name;
+            switchScreen('memorize-screen');
+            nextAya();
+        }
+        function nextAya() {
+            if(ayaIdx < currentAyat.length) {
+                const text = currentAyat[ayaIdx];
+                document.getElementById('aya-display').innerText = text;
+                speak(text);
+                ayaIdx++;
+            } else {
+                document.getElementById('aya-display').innerText = "أحسنتما يا أحمد وصافو! ختمتما السورة";
+                speak("أحسنتما يا أحمد وصافو! ختمتما السورة.. أنتما أبطال!");
+                ayaIdx = 0;
+            }
+        }
+
+        // محرك الرسم (السبورة)
+        const canvas = document.getElementById('writeCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        function initCanvas() {
+            canvas.width = window.innerWidth * 0.85;
+            canvas.height = 350;
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#1e90ff';
+        }
+        
+        function getXY(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        canvas.addEventListener('mousedown', e => { drawing = true; const p = getXY(e); ctx.moveTo(p.x, p.y); });
+        canvas.addEventListener('mousemove', e => { 
+            if(!drawing) return; 
+            const p = getXY(e); 
+            ctx.lineTo(p.x, p.y); 
+            ctx.stroke(); 
+        });
+        window.addEventListener('mouseup', () => { drawing = false; ctx.beginPath(); });
+        // دعم اللمس
+        canvas.addEventListener('touchstart', e => { drawing = true; const p = getXY(e); ctx.moveTo(p.x, p.y); e.preventDefault(); });
+        canvas.addEventListener('touchmove', e => { if(!drawing) return; const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); });
+
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function speak(t) {
+            window.speechSynthesis.cancel();
+            const m = new SpeechSynthesisUtterance(t);
+            m.lang = 'ar-SA';
+            m.rate = 0.8;
+            window.speechSynthesis.speak(m);
+        }
+    </script>
+</body>
+</html>
